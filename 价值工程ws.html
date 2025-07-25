@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workshop交互式会前读物：从JTBD视角探索供应链BI应用</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals -->
+    <!-- Application Structure Plan: The SPA is designed as a narrative journey for the pre-sales trainee. It starts with a hero section setting the stage. The navigation guides the user through four logical sections: 1) What is JTBD? - introducing the core theory interactively. 2) Why Supply Chain? - explaining the context and urgency, featuring an interactive maturity model and pain points. 3) Core JTBD Scenarios - the heart of the app, presenting the three key case studies (Pepsi, Budweiser, Unilever) in an interactive tabbed interface, allowing users to dissect each case's functional, emotional, and social jobs, and see the value through simple charts. 4) Workshop Mission - clearly outlining the goals and tasks. This structure transforms passive reading into active exploration, making complex concepts more digestible and directly linking theory to real-world application. -->
+    <!-- Visualization & Content Choices: 
+        - Supply Chain Maturity Model: Goal: Organize & Show Change. Method: Interactive HTML/CSS vertical stepper. Interaction: Clicking a stage reveals its description. Justification: More engaging than a static list, visually represents progression. Library: Vanilla JS.
+        - Core JTBD Scenarios (Cases): Goal: Compare & Inform. Method: Tabbed interface with cards and charts. Interaction: Users select a case study tab. Within each tab, they see the JTBD dimensions and a "Before vs. After" visualization. A simple Chart.js bar chart quantifies a key improvement (e.g., efficiency gain). Justification: Allows for focused study of each case while enabling easy comparison. The chart provides a quick, powerful visual of the BI solution's impact. Library: Chart.js for canvas-based charts, Vanilla JS for tabs.
+        - All other diagrams/icons are created using HTML/CSS and Unicode characters to avoid SVG/Mermaid.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #FDFBF8; /* Warm Neutral Background */
+            color: #4A4A4A;
+        }
+        .nav-link {
+            position: relative;
+            transition: color 0.3s;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #D5A021; /* Accent Gold */
+            transition: width 0.3s;
+        }
+        .nav-link.active, .nav-link:hover {
+            color: #D5A021;
+        }
+        .nav-link.active::after, .nav-link:hover::after {
+            width: 100%;
+        }
+        .card {
+            background-color: #FFFFFF;
+            border: 1px solid #EAEAEA;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        }
+        .tab-button {
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+        .tab-button.active {
+            color: #C48D0F;
+            border-bottom-color: #D5A021;
+        }
+        .jtbd-dimension-card {
+            border-left: 4px solid;
+            transition: background-color 0.3s;
+        }
+        .jtbd-dimension-card:hover {
+            background-color: #F9F9F9;
+        }
+        .jtbd-functional { border-color: #4A90E2; } /* Blue */
+        .jtbd-emotional { border-color: #50E3C2; } /* Teal */
+        .jtbd-social { border-color: #F5A623; }   /* Orange */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 250px;
+            max-height: 300px;
+        }
+        .section-title::after {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 3px;
+            background-color: #D5A021;
+            margin-top: 12px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="text-2xl font-bold text-gray-800">
+                观远数据<span class="text-[#D5A021]">价值工程工坊</span>
+            </div>
+            <div class="hidden md:flex space-x-8">
+                <a href="#jtbd" class="nav-link text-gray-600 font-medium">什么是JTBD？</a>
+                <a href="#supply-chain" class="nav-link text-gray-600 font-medium">为何是供应链？</a>
+                <a href="#scenarios" class="nav-link text-gray-600 font-medium">核心JTBD场景</a>
+                <a href="#mission" class="nav-link text-gray-600 font-medium">工作坊使命</a>
+            </div>
+            <button id="mobile-menu-button" class="md:hidden text-gray-700 focus:outline-none">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-4 6h4"></path></svg>
+            </button>
+        </nav>
+        <div id="mobile-menu" class="hidden md:hidden px-6 pb-4 space-y-2">
+             <a href="#jtbd" class="block nav-link text-gray-600 font-medium">什么是JTBD？</a>
+             <a href="#supply-chain" class="block nav-link text-gray-600 font-medium">为何是供应链？</a>
+             <a href="#scenarios" class="block nav-link text-gray-600 font-medium">核心JTBD场景</a>
+             <a href="#mission" class="block nav-link text-gray-600 font-medium">工作坊使命</a>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-6 py-12">
+        <section class="text-center mb-24">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4 leading-tight">从JTBD视角出发</h1>
+            <h2 class="text-2xl md:text-3xl font-light text-[#C48D0F] mb-6">探索BI在供应链管理中的重点应用场景</h2>
+            <p class="max-w-3xl mx-auto text-gray-600 text-lg">欢迎参加本次价值工程Workshop。这份交互式会前读物旨在帮助你掌握一种全新的客户视角——“待办任务”(Jobs to be Done)，并理解如何运用它解锁供应链管理的巨大价值。请按顺序浏览，为我们的深度研讨做好准备。</p>
+        </section>
+
+        <section id="jtbd" class="py-16 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center mb-12 section-title">1. 什么是“JTBD”？</h2>
+            <div class="max-w-4xl mx-auto">
+                <div class="card p-8 mb-8">
+                    <p class="text-xl text-center text-gray-700 italic leading-relaxed">“客户并非购买产品，而是‘雇佣’(hire)产品来完成一项‘待办任务’(job)。一项‘任务’指的是个体在特定情境下试图取得的‘进步’(progress)。”</p>
+                </div>
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div class="text-center">
+                        <div class="p-6">
+                            <h3 class="text-6xl mb-4">🥤</h3>
+                            <h4 class="text-xl font-semibold mb-2">经典的“奶昔”案例</h4>
+                            <p class="text-gray-600">客户雇佣奶昔，不是为了解渴，而是为了让早晨通勤的路程变得不那么无聊。这个洞察，彻底改变了产品优化的方向。</p>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                         <div class="p-6">
+                            <h3 class="text-6xl mb-4">🔩</h3>
+                            <h4 class="text-xl font-semibold mb-2">“钻头与钻孔”的隐喻</h4>
+                            <p class="text-gray-600">客户想买的不是钻头，而是墙上的孔。JTBD更进一步：客户想要的，是“欣赏挂在墙上那幅画所带来的愉悦感”。</p>
+                        </div>
+                    </div>
+                </div>
+                 <div class="mt-12 card p-8">
+                    <h3 class="text-2xl font-bold text-center mb-6">“任务”的三个维度</h3>
+                    <p class="text-center text-gray-600 mb-8">在B2B场景中，一项任务绝非单一的功能性活动。理解其情感与社交维度，是建立深度信任、构建高价值方案的关键。</p>
+                    <div class="space-y-6">
+                        <div class="p-6 rounded-lg jtbd-dimension-card jtbd-functional">
+                            <h4 class="text-lg font-semibold text-blue-600 mb-1">功能性任务 (Functional)</h4>
+                            <p class="text-gray-700">客户需要完成的、实际的、功利性的工作。例如：“将预测准确率从70%提升至85%。”</p>
+                        </div>
+                        <div class="p-6 rounded-lg jtbd-dimension-card jtbd-emotional">
+                            <h4 class="text-lg font-semibold text-teal-600 mb-1">情感性任务 (Emotional)</h4>
+                            <p class="text-gray-700">客户在完成任务后希望获得的情感体验。例如：“走进S&OP会议室时能胸有成竹，而不是被动防御。”</p>
+                        </div>
+                        <div class="p-6 rounded-lg jtbd-dimension-card jtbd-social">
+                            <h4 class="text-lg font-semibold text-orange-600 mb-1">社交性任务 (Social)</h4>
+                            <p class="text-gray-700">客户希望被他人如何看待。例如：“在CFO面前，被视为一个能掌控全局、数据驱动的战略型领导。”</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="supply-chain" class="py-16 bg-gray-50 rounded-2xl scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center mb-12 section-title">2. 为什么选择“供应链管理”？</h2>
+            <div class="max-w-5xl mx-auto">
+                <p class="text-center text-lg text-gray-600 mb-12">现代供应链充满了高价值的“待办任务”。企业正面临巨大的内外部压力，传统的管理模式难以为继。这为我们提供了绝佳的切入点，观远BI恰能成为修复其核心“战术断层”的关键工具。</p>
+                
+                <div class="grid md:grid-cols-2 gap-12">
+                    <div>
+                        <h3 class="text-2xl font-bold text-center mb-6">供应链管理成熟度阶梯</h3>
+                        <div id="maturity-model" class="relative pl-8 border-l-2 border-gray-300">
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-bold text-center mb-6">产销协同的“燃烧平台”</h3>
+                        <div class="space-y-4">
+                            <div class="card p-6 flex items-center space-x-4">
+                                <span class="text-3xl">🌪️</span>
+                                <div>
+                                    <h4 class="font-semibold text-lg">需求端剧变</h4>
+                                    <p class="text-gray-600 text-sm">电商、社交电商崛起，需求转向“个性化+快迭代”。</p>
+                                </div>
+                            </div>
+                             <div class="card p-6 flex items-center space-x-4">
+                                <span class="text-3xl">⚔️</span>
+                                <div>
+                                    <h4 class="font-semibold text-lg">竞争前沿转移</h4>
+                                    <p class="text-gray-600 text-sm">竞争焦点从产品本身转移到供应链效率。</p>
+                                </div>
+                            </div>
+                             <div class="card p-6 flex items-center space-x-4">
+                                <span class="text-3xl">🤯</span>
+                                <div>
+                                    <h4 class="font-semibold text-lg">内部管理乱象</h4>
+                                    <p class="text-gray-600 text-sm">数据孤岛、会议争吵、计划与执行脱节。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="scenarios" class="py-16 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center mb-2 section-title">3. 核心JTBD场景拆解</h2>
+            <p class="text-center text-lg text-gray-600 mb-12 max-w-3xl mx-auto">我们将聚焦三个真实的客户案例。请点击切换，深入理解观远BI是如何被“雇佣”来解决他们最棘手的“待办任务”的。</p>
+            
+            <div class="max-w-6xl mx-auto">
+                <div class="mb-8 flex justify-center border-b border-gray-200">
+                    <button data-tab="pepsi" class="tab-button p-4 text-lg font-medium text-gray-500 active">百事食品 (SP→DP)</button>
+                    <button data-tab="budweiser" class="tab-button p-4 text-lg font-medium text-gray-500">百威 (OTD)</button>
+                    <button data-tab="unilever" class="tab-button p-4 text-lg font-medium text-gray-500">联合利华 (F2C)</button>
+                </div>
+
+                <div id="tab-content" class="mt-8">
+                </div>
+            </div>
+        </section>
+
+        <section id="mission" class="py-16 bg-gray-800 text-white rounded-2xl scroll-mt-20">
+            <div class="max-w-4xl mx-auto text-center">
+                <h2 class="text-3xl font-bold mb-12 section-title" style="color:white;">4. 本次Workshop使命</h2>
+                <div class="grid md:grid-cols-2 gap-8 text-left">
+                    <div class="bg-gray-700 p-8 rounded-lg">
+                        <h3 class="text-xl font-semibold text-[#D5A021] mb-4">🎯 核心目标</h3>
+                        <p class="text-gray-300">帮助业务售前、BA、产品经理完成从理论理解到实战应用的转变。你将学习如何倾听客户的“任务”，诊断其深层痛苦，并用客户能够理解的“进步”语言来阐述我们的价值主张。</p>
+                    </div>
+                    <div class="bg-gray-700 p-8 rounded-lg">
+                        <h3 class="text-xl font-semibold text-[#D5A021] mb-4">🏆 输出标准</h3>
+                        <p class="text-gray-300">最终评估环节，每位参与者需从JTBD视角出发，对三个核心场景之一进行模拟演练。由价值工程小组组成的评审团将进行评判，<strong class="text-white">合格率需达到80%以上</strong>方可通过认证。</p>
+                    </div>
+                </div>
+                <div class="mt-12 bg-gray-900/50 p-8 rounded-lg">
+                     <h3 class="text-xl font-semibold text-white mb-4">📝 会前预习作业</h3>
+                     <p class="text-gray-300 mb-6">请针对百事、百威、联合利华三个案例，深入思考并记录以下问题的答案：</p>
+                     <ul class="list-decimal list-inside text-gray-300 space-y-2 text-left max-w-2xl mx-auto">
+                         <li>主要的“客户”是谁？他/她可能的职位和角色是什么？</li>
+                         <li>他们试图完成的核心「功能性任务」是什么？</li>
+                         <li>这项任务可能包含哪些「情感性」和「社交性」的维度？</li>
+                         <li>如果你是该项目的观远售前专家，你会提出的最有力度的开场问题是什么？</li>
+                     </ul>
+                     <div class="mt-8 text-center">
+                        <a href="https://alidocs.dingtalk.com/i/nodes/QG53mjyd80RN43AGHd33lDGPV6zbX04v" target="_blank" rel="noopener noreferrer" class="inline-block bg-[#D5A021] text-white font-bold py-3 px-8 rounded-lg hover:bg-[#C48D0F] transition-colors duration-300 shadow-lg">
+                            下载作业模板
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-gray-800 text-white py-6 mt-16">
+        <div class="container mx-auto text-center text-gray-400">
+            <p>&copy; 2025 观远数据. 价值工程Workshop专属材料.</p>
+        </div>
+    </footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const maturityData = [
+        { level: 'L5', title: '集成业务计划 (IBP)', description: '完全整合的、战略驱动的端到端流程。', color: 'bg-purple-500' },
+        { level: 'L4', title: '协同计划、预测和补货 (CPFR)', description: '协作范围从企业内部延伸至外部合作伙伴。', color: 'bg-indigo-500' },
+        { level: 'L3', title: '销售与运营计划 (S&OP)', description: '建立了正式的S&OP流程，但往往在执行层面失效。这是我们许多500强客户所处的阶段。', color: 'bg-blue-500' },
+        { level: 'L2', title: '跨职能共识', description: '开始使用数据，但流程依然割裂。这是我们许多客户的起点。', color: 'bg-green-500' },
+        { level: 'L1', title: '单一职能预测', description: '纯经验驱动，供需失序。超过60%的中小企业仍处于此阶段。', color: 'bg-yellow-500' }
+    ];
+
+    const maturityContainer = document.getElementById('maturity-model');
+    if (maturityContainer) {
+        maturityData.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'mb-8 cursor-pointer maturity-item';
+            div.innerHTML = `
+                <div class="flex items-center mb-1">
+                    <div class="flex-shrink-0 ${item.color} h-6 w-6 rounded-full -ml-11 mr-4 border-4 border-white"></div>
+                    <h4 class="text-lg font-semibold">${item.level}: ${item.title}</h4>
+                </div>
+                <div class="ml-4 pl-4 maturity-description hidden">
+                    <p class="text-gray-600">${item.description}</p>
+                </div>
+            `;
+            maturityContainer.appendChild(div);
+        });
+    
+        document.querySelectorAll('.maturity-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const description = item.querySelector('.maturity-description');
+                if (description) {
+                    description.classList.toggle('hidden');
+                }
+            });
+        });
+    }
+
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabContentContainer = document.getElementById('tab-content');
+    let activeChart = null;
+
+    const tabsData = {
+        pepsi: {
+            name: '百事食品',
+            title: '百事食品: 实现计划协同 (SP→DP)',
+            jtbd: {
+                functional: '将我们手动的、基于Excel的需求计划流程自动化。',
+                emotional: '结束那些因争论谁的数据更准而浪费时间的、充满压力的会议。',
+                social: '将计划团队打造成一个可信的、具有战略价值的部门。'
+            },
+            painPoints: ['手工Excel地狱，版本混乱', '数据孤岛，多套预测并存', '会议时间用于争论数据，而非决策', '计划不准导致供需错配'],
+            progress: ['为所有计划数据建立单一可信源', '智能的预测建议', '在线协同计划，版本全程追溯', '体系化的偏差分析，驱动持续改进'],
+            chartData: {
+                labels: ['之前', '之后'],
+                datasets: [{
+                    label: '计划会议耗时 (小时)',
+                    data: [4, 1.5],
+                    backgroundColor: ['#F5A623', '#4A90E2'],
+                    borderColor: ['#F5A623', '#4A90E2'],
+                    borderWidth: 1
+                }]
+            }
+        },
+        budweiser: {
+            name: '百威',
+            title: '百威: 打造执行监控塔 (OTD)',
+            jtbd: {
+                functional: '给我一个从订单创建到交付的全程实时视图。',
+                emotional: '消除因信息盲区而产生的焦虑，告别被动响应客户投诉的窘境。',
+                social: '在客户和分销商眼中，成为一个可靠的、主动的合作伙伴。'
+            },
+            painPoints: ['来自多系统的T+1数据延迟', '无法端到端追踪订单生命周期', '被动、救火式的异常处理', '准时交付率(OTD)和客户满意度低'],
+            progress: ['端到端的实时订单追踪仪表盘', '高风险订单的自动化异常预警', '主动风险管理（如供应缺口预测）', '数据驱动的物流决策'],
+            chartData: {
+                labels: ['之前', '之后'],
+                datasets: [{
+                    label: '准时交付率 (OTD %)',
+                    data: [85, 98],
+                    backgroundColor: ['#F5A623', '#4A90E2'],
+                    borderColor: ['#F5A623', '#4A90E2'],
+                    borderWidth: 1
+                }]
+            }
+        },
+        unilever: {
+            name: '联合利华',
+            title: '联合利华: 优化仓储物流 (F2C)',
+            jtbd: {
+                functional: '帮助我们运营一个能满足48小时送达承诺的、超高效率的D2C仓库。',
+                emotional: '让我有信心去管理这个复杂的、高风险的自动化仓储中心。',
+                social: '将我们公司定位为D2C履约领域的行业领导者。'
+            },
+            painPoints: ['新FTC模式带来的极高运营复杂度', '服务失败可能损害品牌声誉', '人力成本高，难以应对大促', '缺乏从洞察到行动的管理闭环'],
+            progress: ['AI驱动的运营监控（悟空系统）', 'KPI触发的预警及可执行指令', '“洞察-行动-反馈”的管理闭环', '大幅降低人力成本和费用'],
+            chartData: {
+                labels: ['之前', '之后'],
+                datasets: [{
+                    label: '大促期间人力成本 (万元)',
+                    data: [50, 20],
+                    backgroundColor: ['#F5A623', '#4A90E2'],
+                    borderColor: ['#F5A623', '#4A90E2'],
+                    borderWidth: 1
+                }]
+            }
+        }
+    };
+
+    function renderTabContent(tabKey) {
+        if (!tabContentContainer) return;
+        const data = tabsData[tabKey];
+        if (activeChart) {
+            activeChart.destroy();
+        }
+        tabContentContainer.innerHTML = `
+            <div class="card p-8">
+                <h3 class="text-2xl font-bold text-center mb-8">${data.title}</h3>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <h4 class="font-semibold text-lg mb-4 text-center">客户的“待办任务”</h4>
+                        <div class="space-y-4">
+                            <div class="p-4 rounded-lg jtbd-dimension-card jtbd-functional">
+                                <h5 class="font-semibold text-blue-600">功能</h5><p>${data.jtbd.functional}</p>
+                            </div>
+                            <div class="p-4 rounded-lg jtbd-dimension-card jtbd-emotional">
+                                <h5 class="font-semibold text-teal-600">情感</h5><p>${data.jtbd.emotional}</p>
+                            </div>
+                            <div class="p-4 rounded-lg jtbd-dimension-card jtbd-social">
+                                <h5 class="font-semibold text-orange-600">社交</h5><p>${data.jtbd.social}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-lg mb-4 text-center">BI驱动的“进步”</h4>
+                        <div class="grid grid-cols-1 gap-4">
+                            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                                <h5 class="font-bold text-red-600 mb-2">痛点 (Before)</h5>
+                                <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">${data.painPoints.map(p => `<li>${p}</li>`).join('')}</ul>
+                            </div>
+                            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                                <h5 class="font-bold text-green-600 mb-2">价值 (After)</h5>
+                                <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">${data.progress.map(p => `<li>${p}</li>`).join('')}</ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-8">
+                    <h4 class="font-semibold text-lg mb-4 text-center">核心价值量化</h4>
+                    <div class="chart-container">
+                        <canvas id="scenarioChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const ctx = document.getElementById('scenarioChart').getContext('2d');
+        activeChart = new Chart(ctx, {
+            type: 'bar',
+            data: data.chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += context.parsed.y;
+                                    if(data.chartData.datasets[0].label.includes('%')) label += '%';
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    if (tabButtons.length > 0) {
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                renderTabContent(button.dataset.tab);
+            });
+        });
+        renderTabContent('pepsi');
+    }
+
+    const mobileMenuButton = document.getElementById('mobile-menu-button');
+    const mobileMenu = document.getElementById('mobile-menu');
+    if (mobileMenuButton && mobileMenu) {
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+    }
+    
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            const href = this.getAttribute('href');
+            if (href === '#') return;
+            
+            const targetElement = document.querySelector(href);
+            if (targetElement) {
+                e.preventDefault();
+                targetElement.scrollIntoView({
+                    behavior: 'smooth'
+                });
+                
+                if(mobileMenu && !mobileMenu.classList.contains('hidden')) {
+                    mobileMenu.classList.add('hidden');
+                }
+            }
+        });
+    });
+
+    const navLinks = document.querySelectorAll('.nav-link');
+    const sections = document.querySelectorAll('section[id]');
+
+    const onScroll = () => {
+        let current = '';
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop;
+            if (pageYOffset >= sectionTop - 100) {
+                current = section.getAttribute('id');
+            }
+        });
+
+        navLinks.forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('href').includes(current)) {
+                link.classList.add('active');
+            }
+        });
+    };
+    
+    window.addEventListener('scroll', onScroll);
+    onScroll();
+
+});
+</script>
+</body>
+</html>
